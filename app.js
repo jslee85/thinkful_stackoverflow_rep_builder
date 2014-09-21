@@ -6,6 +6,13 @@ $(document).ready( function() {
 		var tags = $(this).find("input[name='tags']").val();
 		getUnanswered(tags);
 	});
+	$('.inspiration-getter').submit( function(event){
+		// zero out results if previous search has run
+		$('.results').html('');
+		// get the value of the tags the user submitted
+		var tags = $(this).find("input[name='answerers']").val();
+		getAnswered(tags);
+	});
 });
 
 // this function takes the question object returned by StackOverflow 
@@ -36,6 +43,30 @@ var showQuestion = function(question) {
 												'</a>' +
 							'</p>' +
  							'<p>Reputation: ' + question.owner.reputation + '</p>'
+	);
+
+	return result;
+};
+
+var showAnswers = function(answer) {
+	
+	var result = $('.templates .answer').clone();
+	
+	// set the score for answer property in result
+	var score = result.find('.userscore');
+	score.text(answer.score);
+
+	// set the post count for answer property in result
+	var postcount = result.find('.count');
+	postcount.text(answer.post_count);
+
+	// set some properties related to answerer
+	var answerer = result.find('.answerer');
+	answerer.html('<p>Name: <a target="_blank" href=http://stackoverflow.com/users/' + answer.user.user_id + ' >' +
+													answer.user.display_name +
+												'</a>' +
+							'</p>' +
+ 							'<p>Reputation: ' + answer.user.reputation + '</p>'
 	);
 
 	return result;
@@ -88,5 +119,31 @@ var getUnanswered = function(tags) {
 	});
 };
 
+var getAnswered = function(answers) {
+	
+	var request = {tagged: answers,
+								site: 'stackoverflow',
+								order: 'desc',
+								sort: 'creation'};
+	
+	var result = $.ajax({
+		url: "http://api.stackexchange.com/2.2/tags/"+answers+"/top-answerers/all_time",
+		data: request,
+		dataType: "jsonp",
+		type: "GET",
+		})
+	.done(function(result){
+		var searchResults = showSearchResults(request.tagged, result.items.length);
 
+		$('.search-results').html(searchResults);
 
+		$.each(result.items, function(i, item) {
+			var smartguy = showAnswers(item);
+			$('.results').append(smartguy);
+		});
+	})
+	.fail(function(jqXHR, error, errorThrown){
+		var errorElem = showError(error);
+		$('.search-results').append(errorElem);
+	});
+};
